@@ -11,6 +11,7 @@ def month_interval(dt_b, dt_e):
     dt_Bg = datetime.datetime(dt_Bg_year, dt_Bg_month, dt_Bg_day)
     dt_count_m = dt_Bg_month
     dt_count_y = dt_Bg_year
+    list_date.append(datetime.datetime(dt_count_y, dt_count_m, 1))
 
     dt_End_year = int(dt_e[0][6:])
     dt_End_month = int(dt_e[0][3:5])
@@ -31,7 +32,7 @@ def month_interval(dt_b, dt_e):
             dt_count_y += 1
         print(dt_count_m)
         list_date.append(datetime.datetime(dt_count_y, dt_count_m, 1))
-    print(list_date[0])
+    print(list_date)
     return list_date
 
 def read_fl():

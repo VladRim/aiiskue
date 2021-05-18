@@ -4,6 +4,8 @@ import datetime
 import calendar
 import config
 import data_base.init_bd_mssql as mssql
+
+
 cursor, conn = mssql.init_mssql()
 
 
@@ -66,15 +68,17 @@ def date_db(Date_req, Time_req):
 
 
 df_pu = pd.read_csv(config.FILE_PU, encoding='windows-1251', sep=';', error_bad_lines=False)
+df_pu.PU.astype(str)
 print(df_pu)
 sum_a = 0
 sum_r = 0
+val = 0
 integral_a_e = []
 integral_r_e = []
 
 for cnt in range(0, len(df_pu.action)):
     if df_pu.action[cnt] == 1:
-        sn_pu = str(df_pu.PU[cnt])
+        sn_pu = str(int(df_pu.PU[cnt]))
         cursor.execute('SELECT ID_MeterInfo FROM MeterInfo WHERE SN = ?', sn_pu)
         ID_Meter = cursor.fetchone()
         cursor.execute('SELECT ID_Point FROM MeterMountHist WHERE ID_MeterInfo = ?', ID_Meter[0])
@@ -116,12 +120,12 @@ for cnt in range(0, len(df_pu.action)):
         # показания на конец периода
         try:
             integral_a_e = integral_a_b[0] + sum_a
-            ntegral_r_e = sum_r
-            #integral_r_e = integral_r_b[0] + sum_r
+            #ntegral_r_e = sum_r
+            integral_r_e = integral_r_b[0] + sum_r
         except TypeError:
             print('Начальные показания отсутствуют: ', integral_a_b[0])
 
-        print("дата ", tm_bd, "показания конец активка ", integral_a_b, "показания конец реактивка ", integral_r_b)
+        print("дата ", tm_bd, "показания конец активка ", integral_a_e, "показания конец реактивка ", integral_r_e)
         for i in range(0, len(A_received)):
             P = float(A_received_p[i]) / 2  # делим на постоянную счетчика, если в файле данные из профиля счетчика
             R = float(R_received_p[i]) / 2  # делим на постоянную счетчика, если в файле данные из профиля счетчика
@@ -129,13 +133,24 @@ for cnt in range(0, len(df_pu.action)):
             print("дата, время база ", tm_bd, "значение P", P)
             print("дата, время база ", tm_bd, "значение R", R)
             try:
-                cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?,?,?,?)", ID_PP_activ[0], tm_bd, P, 0)  # активка на прием
-                cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?,?,?,?)", ID_PP_reactiv[0], tm_bd, R, 0)  # реактивка на прием
+                cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?, ?,?,?)", ID_PP_reactiv[0],
+                               tm_bd, R, 0)  # реактивка на прием
+                cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?, ?,?,?)", ID_PP_activ[0], tm_bd, P, 0)  # активка на прием
+                #cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?, ?,?,?)", 10244, tm_bd,
+                #               P, 0)  # активка на отдачу Омск РП-404
+
+                #cursor.execute("INSERT INTO PointMains (ID_PP, DT, Val, State) VALUES(?, ?,?,?)", 10246, tm_bd,
+                #              R, 0)  # реактивка на отдачу Омск РП-404
 
             # если данные уже есть, заменить на данные из файла
             except pyodbc.IntegrityError:
                 cursor.execute("UPDATE PointMains SET Val=? WHERE ID_PP = ? and DT = ?", P, ID_PP_activ[0], tm_bd)  # активка на прием
+                #cursor.execute("UPDATE PointMains SET Val=? WHERE ID_PP = ? and DT = ?", P, 10244,
+                #               tm_bd)  # активка на отдачу Омск РП-404
+                cursor.execute("UPDATE PointMains SET Val=? WHERE ID_PP = ? and DT = ?", P, ID_PP_reactiv[0], tm_bd)  # реактивка на прием
                 #cursor.execute("delete from PointMains WHERE ID_PP = ? and DT = ?", ID_PP_reactiv[0], tm_bd)  # реактивка на прием
+                #cursor.execute("UPDATE PointMains SET Val=? WHERE ID_PP = ? and DT = ?", R, 10246,
+                #               tm_bd)  # реактивка на отдачу Омск РП-404
 
 if count % 48 == 0:# если кратно 48, то получаем целое количество дней, если количество дней не целое, показания не фиксируем
     hr = 1
